@@ -1,14 +1,18 @@
 package Router::Easy::Route::Regex;
 use Carp 'croak';
 use Moo;
+extends 'Router::Easy::Route';
 has path => (
   is => 'ro',
   required => 1,
 );
 sub matches {
-  my ($self, $url) = @_;
+  my ($self, $url, $method) = @_;
   if ($url =~ $self->path) {
-    return {%+};
+	if ($self->method) {
+	  return unless($self->method eq $method);
+	}
+	return {%+};
   }
   return;
 }

@@ -12,7 +12,6 @@ use v5.16.0;
 use Moo;
 use Carp qw(carp cluck confess croak);
 use Scalar::Util 'blessed';
-use Data::Dumper 'Dumper';
 
 has routes => (
   is => 'rw',
@@ -21,35 +20,35 @@ has routes => (
 );
 
 sub simple {
-  my ($self, $url) = @_;
-  return Router::Easy::Route::Simple->new(path => $url);
+  my ($self, $url, $method) = @_;
+  return Router::Easy::Route::Simple->new(path => $url, method => $method);
 }
 
 sub friendly {
-  my ($self, $url, $rules) = @_;
+  my ($self, $url, $method, $rules) = @_;
   $rules ||= {};
-  return Router::Easy::Route::Friendly->new(path =>$url, rules => $rules);
+  return Router::Easy::Route::Friendly->new(path =>$url, rules => $rules, method => $method);
 }
 
 sub regex {
-  my ($self, $url) = @_;
-  return Router::Easy::Route::Regex->new(path => $url);
+  my ($self, $url, $method) = @_;
+  return Router::Easy::Route::Regex->new(path => $url, method => $method);
 }
 sub sim {
-  my ($self, $url, $return) = @_;
-  my $s = $self->simple($url);
+  my ($self, $url, $method, $return) = @_;
+  my $s = $self->simple($url, $method);
   $self->add($s, $return);
 }
 
 sub f {
-  my ($self, $url, $rules, $return) = @_;
-  my $f = $self->friendly($url,$rules);
+  my ($self, $url, $method, $rules, $return) = @_;
+  my $f = $self->friendly($url, $method, $rules);
   $self->add($f,$return);
 }
 
 sub r {
-  my ($self, $url, $return) = @_;
-  my $r = $self->regex($url);
+  my ($self, $url, $method, $return) = @_;
+  my $r = $self->regex($url, $method);
   $self->add($r, $return);
 }
 
@@ -61,14 +60,9 @@ sub add {
   $self;
 }
 sub match {
-  my ($self, $url) = @_;
+  my ($self, $url, $method) = @_;
   my @ret;
-#  warn "routes:" . Dumper $self->routes;
-  map {
-    $_->[1];
-  } grep {
-	$_->[0]->matches($url) ? $_->[1] : 0;
-  } @{$self->routes};
+  map $_->[1], grep !!$_->[0]->matches($url,$method), @{$self->routes};
 }
 
 sub clear {
@@ -78,12 +72,10 @@ sub clear {
 
 sub to_psgi {
   my ($self) = @_;
-#  warn "routes: " . Dumper $self->routes;
   # Hunt out any members that aren't coderefs.
   # The contract is that requests will be handled by calling the return
   # and we can't call something that isn't a subref...
   my @invalid = grep {
-#	warn $_->[0]->path . ": " . (ref($_->[1]) eq 'CODE');
 	ref($_->[1]) ne 'CODE';
   } @{$self->routes};
   confess(
@@ -95,7 +87,7 @@ sub to_psgi {
   sub {
     my $env = shift;
 	# Get the matching routes
-    my @matches = $self->match($env->{'REQUEST_URI'});
+    my @matches = $self->match($env->{'REQUEST_URI'},$env->{'REQUEST_METHOD'});
 	# Huzzah!
 	return $matches[0]->($env) if 1 == @matches;
 	# More than one route matched

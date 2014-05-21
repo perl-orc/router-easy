@@ -1,11 +1,7 @@
 package Router::Easy::Route::Friendly;
 use Moo;
+extends 'Router::Easy::Route';
 use Carp 'confess';
-has path => (
-  is => 'ro',
-  isa => sub{die("Not a string: $_") unless !ref($_);},
-  required => 1,
-);
 has rules => (
   is => 'ro',
   required => 1,
@@ -15,9 +11,14 @@ has re => (
   default => sub {undef},
 );
 sub matches {
-  my ($self, $url) = @_;
+  my ($self, $url, $method) = @_;
   if ($url =~ $self->re) {
-    return {%+};
+	if ($self->method) {
+	  if ($self->method ne $method) {
+		return;
+	  }
+	}
+	return {%+};
   }
   return;
 }
@@ -36,12 +37,10 @@ sub _decompose {
 	  push @vars, $1;
 	  my $re = '(?<' . $1 . '>' . ($rules->{$1} || '[^\/]+') . ')';
 	  push @pieces, $re;
-	} elsif ($working =~ m/^:/) {
+	} else {
 	  # We've got an invalid variable
-	  confess("Couldn't figure out what to do with $working");
-	} elsif ($working =~ s/^([^:]+)//) {
-	  # constant, we just need to escape it
-	  push @pieces, quotemeta($1);
+	  confess("Couldn't figure out what to do with $working") if ($working =~ m/^:/);
+	  push @pieces, quotemeta($1) if $working =~ s/^([^:]+)//;
 	}
 	my $re = '^' . (join '', @pieces) . '\/?$';
 	$re = qr/$re/;
