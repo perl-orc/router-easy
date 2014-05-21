@@ -16,11 +16,11 @@ eq_or_diff($rs->regex(qr(/foo/(?<bar>[a-z]+)))->path, qr(/foo/(?<bar>[a-z]+)));
 
 eq_or_diff($rs->routes,[]);
 
-$rs->sim(qr(/),1);
+$rs->s(qr(/),1);
 eq_or_diff($rs->routes->[0]->[0]->path,qr(/));
-$rs->fr('/foo/:bar',{},2);
+$rs->f('/foo/:bar',{},2);
 eq_or_diff($rs->routes->[1]->[0]->path,'/foo/:bar');
-$rs->re(qr(/foo/(?<bar>baz)),3);
+$rs->r(qr(/foo/(?<bar>baz)),3);
 eq_or_diff($rs->routes->[2]->[0]->path,qr(/foo/(?<bar>baz)));
 
 my $s = $rs->routes->[0]->[0];

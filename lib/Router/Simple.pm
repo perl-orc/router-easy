@@ -9,7 +9,7 @@ use Router::Simple::Route::Regex;
 use Moo;
 
 has routes => (
-  is => 'ro',
+  is => 'rw',
   init_arg => undef,
   default => sub {[]},
 );
@@ -29,14 +29,51 @@ sub regex {
   my ($self, $url) = @_;
   return Router::Simple::Route::Regex->new(path => $url);
 }
+{
+  no strict 'refs';
+  # This is a hack to preserve cperl-mode highlighting, which thinks i'm doing s///
+  *{__PACKAGE__.'::s'} = sub {
+	my ($self, $url, $return) = @_;
+	my $s = $self->simple($url);
+	$self->add($s, $return);
+  };
+}
 
-sub s {
+sub f {
+  my ($self, $url, $rules, $return) = @_;
+  my $f = $self->friendly($url,$rules);
+  $self->add($f,$return);
+}
 
+sub r {
+  my ($self, $url, $return) = @_;
+  my $r = $self->regex($url);
+  $self->add($r, $return);
 }
-sub f{
+
+sub add {
+  my ($self, $route, $return) = @_;
+  my @routes = @{$self->routes};
+  push @routes, [$route,$return];
+  $self->routes([@routes]);
+  $self;
 }
-sub r{
+sub match {
+  my ($self, $url) = @_;
+  my @ret;
+  grep {
+    $_ = $_->matches($url);
+  } @{$self->routes}
 }
+
+sub clear {
+  my ($self) = @_;
+  $self->routes([]);
+}
+sub to_app {
+  sub {}
+}
+
 1
 __END__
 
@@ -58,13 +95,19 @@ __END__
 
 =head2 new() => Router::Simple
 
-=head2 s
+=head2 s($path: Str, $return: Any) => Router
 
-=head2 f
+Creates a new simple route out of $path and adds it to the router to return $return
 
-=head2 r
+=head2 f($path: Str, $rules: HashRef[Str|Regex], $return: Any) => Router
 
-=head2 simple($path: String) => RouteSimple
+Creates a new friendly route out of $path and $rules and adds it to the router to return $return
+
+=head2 r($path: Str|Regex, $return: Any
+
+Creates a new regex route out of $path and adds it to the router to return $return
+
+=head2 simple($path: Str) => RouteSimple
 
 Takes a simple string constant for the url, returns a RouteSimple
 
@@ -81,6 +124,24 @@ Examples:
     $rs->friendly('/blog/:blog/:tag/:tag', {blog => qr/[a-z0-9_]+/});
 
 =head2 regex($path: String) => RouteRegex
+
+Creates a regex route and returns it. You can get named captures using the standard perl named capture syntax: C<(?<name>match)>. There are gotchas using named captchas if you're doing silly things with lots of alternation because names are actually bound to numbers so if orders change... Anyway, you shouldn't come across this doing URLs, and in any case, if you do, I hope you know what you're doing. It's a mad world out there...
+
+=head2 add($route: Route, $return: Any) => Router
+
+Adds a route to the router. The return value is what will be returned when the route matches. If you're going to use to_psgi(), you want a SubRef in here to invoke code. It should behave like a standard PSGI sub.
+
+=head2 clear => Router
+
+Removes all routes
+
+=head2 match($url) => Any
+
+Matches the url in sequence against the routes, returns a list of results that matched
+
+=head2 to_psgi() => SubRef
+
+Assumes that all routes resolve to subrefs and creates a PSGI application on that basis.
 
 =head1 NOTES
 

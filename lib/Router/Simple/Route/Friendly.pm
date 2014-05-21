@@ -3,6 +3,7 @@ use Moo;
 use Carp 'confess';
 has path => (
   is => 'ro',
+  isa => sub{die("Not a string: $_") unless !ref($_);},
   required => 1,
 );
 has rules => (
@@ -25,25 +26,29 @@ sub reverse {
 }
 sub _decompose {
   my ($self, $url, $rules) = @_;
-    my $working = $url;
-    my @vars;
-    my @pieces;
-    while ($working) {
-      if ($working =~ s/^:([a-z]+)//) {
-        no autovivification;
-        # We need to be able to identify it by name for reverse
-        push @vars, $1;
-        my $re = '(?<' . $1 . '>' . ($rules->{$1} || '[^\/]+') . ')';
-        push @pieces, $re;
-      } elsif ($working =~ s/^([^:]+)//) {
-        # constant, we just need to escape it
-        push @pieces, quotemeta($1);
-      }
-    }
-    my $re = '^' . (join '', @pieces) . '\/?$';
-    $re = qr/$re/;
-    $self->re($re);
+  my $working = $url;
+  my @vars;
+  my @pieces;
+  while ($working) {
+	if ($working =~ s/^:([a-z]+)//) {
+	  no autovivification;
+	  # We need to be able to identify it by name for reverse
+	  push @vars, $1;
+	  my $re = '(?<' . $1 . '>' . ($rules->{$1} || '[^\/]+') . ')';
+	  push @pieces, $re;
+	} elsif ($working =~ m/^:/) {
+	  # We've got an invalid variable
+	  confess("Couldn't figure out what to do with $working");
+	} elsif ($working =~ s/^([^:]+)//) {
+	  # constant, we just need to escape it
+	  push @pieces, quotemeta($1);
+	}
+	my $re = '^' . (join '', @pieces) . '\/?$';
+	$re = qr/$re/;
+	$self->re($re);
+  }
 }
+
 sub BUILD {
   my $self = shift;
   $self->_decompose($self->path, $self->rules);
