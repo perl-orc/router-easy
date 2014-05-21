@@ -1,11 +1,11 @@
-package Router::Simple;
+package Router::Easy;
 
 # ABSTRACT: A simple routing system for plumbing frameworky things
 
-use Router::Simple::Route::Simple;
-use Router::Simple::Route::Friendly;
-use Router::Simple::Route::Regex;
-use Router::Simple::Error qw(new_404 new_500);
+use Router::Easy::Route::Simple;
+use Router::Easy::Route::Friendly;
+use Router::Easy::Route::Regex;
+use Router::Easy::Error qw(new_404 new_500);
 
 use v5.16.0;
 
@@ -22,18 +22,18 @@ has routes => (
 
 sub simple {
   my ($self, $url) = @_;
-  return Router::Simple::Route::Simple->new(path => $url);
+  return Router::Easy::Route::Simple->new(path => $url);
 }
 
 sub friendly {
   my ($self, $url, $rules) = @_;
   $rules ||= {};
-  return Router::Simple::Route::Friendly->new(path =>$url, rules => $rules);
+  return Router::Easy::Route::Friendly->new(path =>$url, rules => $rules);
 }
 
 sub regex {
   my ($self, $url) = @_;
-  return Router::Simple::Route::Regex->new(path => $url);
+  return Router::Easy::Route::Regex->new(path => $url);
 }
 sub sim {
   my ($self, $url, $return) = @_;
@@ -110,8 +110,8 @@ __END__
 
 =head1 SYNOPSIS
 
-    use Router::Simple;
-    my $rs = Router::Simple->new;
+    use Router::Easy;
+    my $rs = Router::Easy->new;
     # Simple routes just match a string
     $rs->sim('/',sub {"Hello World"});
     $rs->sim('/blog', sub {"Listing of blogs"});
@@ -124,7 +124,7 @@ __END__
 
 =head1 METHODS
 
-=head2 new() => Router::Simple
+=head2 new() => Router::Easy
 
 =head2 sim($path: Str, $return: Any) => Router
 

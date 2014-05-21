@@ -3,10 +3,10 @@ use Test::Differences;
 use Test::Exception;
 
 use strictures;
-use Router::Simple;
+use Router::Easy;
 use Test::Mech;
 
-my $rs = Router::Simple->new;
+my $rs = Router::Easy->new;
 use Data::Dumper 'Dumper';
 
 # Test utility functions

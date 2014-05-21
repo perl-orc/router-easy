@@ -1,4 +1,4 @@
-package Router::Simple::Route::Regex;
+package Router::Easy::Route::Regex;
 use Carp 'croak';
 use Moo;
 has path => (

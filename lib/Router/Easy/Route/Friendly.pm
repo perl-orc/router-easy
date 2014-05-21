@@ -1,4 +1,4 @@
-package Router::Simple::Route::Friendly;
+package Router::Easy::Route::Friendly;
 use Moo;
 use Carp 'confess';
 has path => (

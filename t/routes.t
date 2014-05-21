@@ -2,14 +2,14 @@ use Test::More;
 use Test::Differences;
 use strictures;
 
-use Router::Simple::Route::Simple;
-use Router::Simple::Route::Regex;
-use Router::Simple::Route::Friendly;
+use Router::Easy::Route::Simple;
+use Router::Easy::Route::Regex;
+use Router::Easy::Route::Friendly;
 
 ########## ::Simple ##########
 
 sub make_simple {
-  Router::Simple::Route::Simple->new(path => shift);
+  Router::Easy::Route::Simple->new(path => shift);
 }
 
 my @sim = (
@@ -28,7 +28,7 @@ ok(!$sim[1]->matches('/foo'));
 ########## ::Friendly ##########
 
 sub make_friendly {
-  Router::Simple::Route::Friendly->new(path => shift, rules => shift);
+  Router::Easy::Route::Friendly->new(path => shift, rules => shift);
 }
 
 my @fri = (
@@ -62,7 +62,7 @@ eq_or_diff($fri[5]->matches('/foo/abc'), {baz => 'abc'});
 ########## ::Regex ##########
 
 sub make_regex {
-  Router::Simple::Route::Regex->new(path => shift, names => shift);
+  Router::Easy::Route::Regex->new(path => shift, names => shift);
 }
 
 my @re = (

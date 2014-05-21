@@ -1,4 +1,4 @@
-package Router::Simple::Route::Simple;
+package Router::Easy::Route::Simple;
 use Moo;
 has path => (
   is => 'ro',
