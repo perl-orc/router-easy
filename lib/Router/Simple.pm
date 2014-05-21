@@ -5,8 +5,14 @@ package Router::Simple;
 use Router::Simple::Route::Simple;
 use Router::Simple::Route::Friendly;
 use Router::Simple::Route::Regex;
+use Router::Simple::Error qw(new_404 new_500);
+
+use v5.16.0;
 
 use Moo;
+use Carp qw(carp cluck confess croak);
+use Scalar::Util 'blessed';
+use Data::Dumper 'Dumper';
 
 has routes => (
   is => 'rw',
@@ -29,14 +35,10 @@ sub regex {
   my ($self, $url) = @_;
   return Router::Simple::Route::Regex->new(path => $url);
 }
-{
-  no strict 'refs';
-  # This is a hack to preserve cperl-mode highlighting, which thinks i'm doing s///
-  *{__PACKAGE__.'::s'} = sub {
-	my ($self, $url, $return) = @_;
-	my $s = $self->simple($url);
-	$self->add($s, $return);
-  };
+sub sim {
+  my ($self, $url, $return) = @_;
+  my $s = $self->simple($url);
+  $self->add($s, $return);
 }
 
 sub f {
@@ -61,17 +63,46 @@ sub add {
 sub match {
   my ($self, $url) = @_;
   my @ret;
-  grep {
-    $_ = $_->matches($url);
-  } @{$self->routes}
+#  warn "routes:" . Dumper $self->routes;
+  map {
+    $_->[1];
+  } grep {
+	$_->[0]->matches($url) ? $_->[1] : 0;
+  } @{$self->routes};
 }
 
 sub clear {
   my ($self) = @_;
   $self->routes([]);
 }
-sub to_app {
-  sub {}
+
+sub to_psgi {
+  my ($self) = @_;
+#  warn "routes: " . Dumper $self->routes;
+  # Hunt out any members that aren't coderefs.
+  # The contract is that requests will be handled by calling the return
+  # and we can't call something that isn't a subref...
+  my @invalid = grep {
+#	warn $_->[0]->path . ": " . (ref($_->[1]) eq 'CODE');
+	ref($_->[1]) ne 'CODE';
+  } @{$self->routes};
+  confess(
+    "All entries in the router must be subrefs for to_psgi to work. " .
+    "The following keys are not: " .
+	join(",", map {$_->[0]->path} @invalid)
+  ) if @invalid;
+  # This is the subref that we'll be returning
+  sub {
+    my $env = shift;
+	# Get the matching routes
+    my @matches = $self->match($env->{'REQUEST_URI'});
+	# Huzzah!
+	return $matches[0]->($env) if 1 == @matches;
+	# More than one route matched
+	die(new_500("Multiple matches", $env)) if @matches;
+	# No routes matched
+    die(new_404($env->{'REQUEST_URI'}, $env));
+  }
 }
 
 1
@@ -82,8 +113,8 @@ __END__
     use Router::Simple;
     my $rs = Router::Simple->new;
     # Simple routes just match a string
-    $rs->s('/',sub {"Hello World"});
-    $rs->s('/blog', sub {"Listing of blogs"});
+    $rs->sim('/',sub {"Hello World"});
+    $rs->sim('/blog', sub {"Listing of blogs"});
     # Friendly routes are rails inspired and take regexes. Name tokens are `:[a-z]+`
     $rs->f('/blog/:blog', {blog => '[a-z]+'}, sub {"A blog"});
     # Regex routes allow ultimate flexibility
@@ -95,7 +126,7 @@ __END__
 
 =head2 new() => Router::Simple
 
-=head2 s($path: Str, $return: Any) => Router
+=head2 sim($path: Str, $return: Any) => Router
 
 Creates a new simple route out of $path and adds it to the router to return $return
 
