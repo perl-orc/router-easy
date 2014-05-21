@@ -1,7 +1,7 @@
 use Test::More;
 use Test::Differences;
 use strictures;
-use Router::Simple;
+
 use Router::Simple::Route::Simple;
 use Router::Simple::Route::Regex;
 use Router::Simple::Route::Friendly;
@@ -36,6 +36,8 @@ my @fri = (
   make_friendly('/foo/:bar', {}),
   make_friendly('/foo/:bar',{bar => '[0-9]+'}),
   make_friendly('/foo/:baz',{bar => '[0-9]+'}),
+  make_friendly('/foo/:bar',{bar => qr/[0-9]+/}),
+  make_friendly('/foo/:baz',{bar => qr/[0-9]+/}),
 );
 
 eq_or_diff($fri[0]->matches('/foo'), {});
@@ -49,6 +51,13 @@ eq_or_diff($fri[3]->matches('/foo/123'), {baz => '123'});
 eq_or_diff($fri[3]->matches('/foo/abc'), {baz => 'abc'});
 like('/foo/abc', $fri[3]->re);
 eq_or_diff($fri[3]->matches('/foo/abc'), {baz => 'abc'});
+eq_or_diff($fri[4]->matches('/foo/123'), {bar => '123'});
+eq_or_diff($fri[4]->matches('/foo/456'), {bar => '456'});
+eq_or_diff($fri[4]->matches('/foo/bar'), undef);
+eq_or_diff($fri[5]->matches('/foo/123'), {baz => '123'});
+eq_or_diff($fri[5]->matches('/foo/abc'), {baz => 'abc'});
+like('/foo/abc', $fri[3]->re);
+eq_or_diff($fri[5]->matches('/foo/abc'), {baz => 'abc'});
 
 ########## ::Regex ##########
 
@@ -58,8 +67,8 @@ sub make_regex {
 
 my @re = (
   make_regex('/foo'),
-  make_regex('/foo/(?<bar>[0-9]+)'),
-  make_regex('/foo/(?<bar>[^\/]+)/(?<baz>[0-9]+)'),
+  make_regex(qr(/foo/(?<bar>[0-9]+))),
+  make_regex(qr(foo/(?<bar>[^/]+)/(?<baz>[0-9]+))),
 );
 
 eq_or_diff($re[0]->matches('/foo'), {});
